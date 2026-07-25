@@ -1,0 +1,49 @@
+TASK: ABA-SKILL-001R
+DATE: 2026-07-24
+AGENT: elito
+
+SUMMARY
+-------
+Refined the Abacus engineering knowledge base and `osk-go-guide` without
+changing application code. Documentation now distinguishes planning
+(ROADMAP), durable artifact history (ENGINEERING_LOG), decisions (ADRs), debt,
+and long-lived knowledge. The standalone AI prompt register was removed;
+material prompt influence is recorded in the engineering log.
+
+STRUCTURAL CHANGES
+------------------
+- Added knowledge indexes for use cases, acceptance tests, architecture, and
+  glossary material.
+- Reworked ROADMAP.md into an implementation-intent sequence.
+- Reworked ENGINEERING_LOG.md into a table-oriented artifact index.
+- Removed docs/engineering/AI_PROMPTS.md.
+
+SKILL REFINEMENTS
+-----------------
+- Renamed the skill to Go Engineering Skill.
+- Added OSK engineering philosophy, decision heuristics, deviation guidance,
+  an ownership model, and concise BAD / GOOD examples.
+- Preserved the existing checklist, severity model, anti-patterns, expected
+  review output, and source attribution.
+
+RATIONALE
+---------
+The refinements turn the guide from a curated style reference into a reusable
+engineering artifact that teaches when to choose an abstraction and who owns
+its lifecycle. The project documentation now records decisions as navigable
+artifacts rather than as a prompt or conversation history.
+
+VALIDATION
+----------
+- Confirmed the required engineering and knowledge documentation files exist.
+- Confirmed AI_PROMPTS.md is absent and its replacement policy is stated in
+  ENGINEERING_LOG.md.
+- Reviewed the Go skill structure for the required preserved and added
+  sections.
+- Ran git diff --check.
+
+OUTSTANDING RECOMMENDATIONS
+---------------------------
+Populate the knowledge indexes only as durable use cases, acceptance scenarios,
+architecture explanations, and shared terminology become known. Do not create
+documentation merely to fill the folders.

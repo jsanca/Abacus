@@ -1,0 +1,106 @@
+TASK: ABA-SKILL-001
+DATE: 2026-07-24
+AGENT: deep-pro
+
+SUMMARY
+-------
+Created the `osk-go-guide` OSK skill, the first reusable skill in the Abacus
+project's `.claude/skills/` directory. The skill curates and operationalizes
+guidance from the Uber Go Style Guide (reviewed from local clone at
+`/Users/jonathan/code/guide`). The skill provides a review checklist, severity
+model, anti-patterns catalog, and Abacus-specific adaptations — designed to be
+actionable for both implementation and review while remaining concise enough
+for regular agent loading.
+
+Supporting documentation was created: ROADMAP.md and ENGINEERING_LOG.md were
+bootstrapped to track project progress. No application code was changed.
+
+FILES CHANGED
+-------------
++ .claude/skills/osk-go-guide/SKILL.md
++ .claude/skills/osk-go-guide/references/uber-go-guide-notes.md
++ docs/engineering/ROADMAP.md
++ docs/engineering/ENGINEERING_LOG.md
++ docs/engineering/agents-reports/report-ABA-SKILL-001-clio.txt
+
+SOURCE REPOSITORY REVIEWED
+--------------------------
+- uber-go/guide (local clone: /Users/jonathan/code/guide)
+- style.md: 4107 lines, generated from ~66 source files in src/
+- Full topic coverage: naming, interfaces, pointers, maps/slices, mutexes,
+  errors, context, goroutines, testing, linting, patterns, and more.
+
+MAIN RULES CURATED
+------------------
+- Naming: MixedCaps, lower-case packages (no util/common), Err/err prefix,
+  Error suffix, descriptive names throughout.
+- Interfaces: defined by consumers, no speculative interfaces, compile-time
+  compliance checks, never pointer-to-interface.
+- Structs: named fields, no embedded mutexes, synchronization primitives
+  not copied, zero values valid for mutexes.
+- Errors: matched to use case (errors.New, fmt.Errorf, custom type),
+  wrapped with %w, handled once, no "failed to" chains.
+- Concurrency: every goroutine stoppable/waitable, no goroutines in init(),
+  sync.WaitGroup or done channel, graceful shutdown required.
+- Context: first parameter, never in structs, propagated through call chain.
+- Testing: table-driven with give/want, t.Run sub-tests, loop var capture
+  for t.Parallel(), httptest for HTTP.
+- Collections: nil for empty slices, len(s)==0 for checks, defensive copy
+  at boundaries, make() with capacity hints.
+- Logging: log/slog for structured logging, no fmt.Println.
+- Exit: os.Exit/log.Fatal only in main(), single run() error pattern.
+- Linting: goimports, govet, golangci-lint (errcheck, staticcheck minimum).
+
+RULES INTENTIONALLY OMITTED
+---------------------------
+- go.uber.org/atomic: stdlib sync/atomic sufficient for small services
+- go.uber.org/goleak: extra dependency; lifecycle rules suffice
+- _ prefix for unexported globals: Uber-specific, conflicts with _ discard
+- Full revive linter config: covered by golangci-lint defaults
+- Absolute ban on init(): legitimate uses exist for regexp compilation etc.
+
+ABACUS-SPECIFIC ADAPTATIONS
+----------------------------
+- Concrete Registry instance (not global mutable map), immutable after startup
+- No mutex needed for concurrent reads of immutable registry
+- Function-based operation execution (ExecuteFunc) over strategy hierarchies
+- No registry interface unless a consumer demonstrates need
+- Graceful shutdown required (BLOCKER)
+- log/slog for structured logging
+- httptest for API-level tests
+- golangci-lint in make lint / make verify
+- No-op telemetry allowed but must not become ornamental architecture
+
+VALIDATION PERFORMED
+--------------------
+1. SKILL.md structure verified: purpose, activation, principles, checklist,
+   severity model, review output format, Abacus guidance, anti-patterns,
+   source attribution — all sections present.
+2. Relative paths confirmed: references/uber-go-guide-notes.md resolves
+   from SKILL.md's directory.
+3. Mental application to current Abacus registry design:
+   - Would correctly prefer ExecuteFunc over strategy type hierarchies ✓
+   - Would flag global mutable registries as BLOCKER ✓
+   - Would flag unnecessary mutexes on immutable data as MAJOR ✓
+   - Would catch missing graceful shutdown as BLOCKER ✓
+   - Would catch goroutine leaks as BLOCKER ✓
+   - Would catch non-descriptive names as MINOR ✓
+   - Would catch exported symbols without doc comments as MINOR ✓
+   - Would catch unwrapped errors as MAJOR ✓
+   - Would catch speculative interfaces as MAJOR ✓
+4. Abacus-specific guidance aligns with CLAUDE.md conventions ✓
+5. Source is attributed in both SKILL.md and reference notes ✓
+6. No copied long-form source text ✓
+7. No invented official Go standards ✓
+8. golang-standards/project-layout explicitly disavowed ✓
+
+UNRESOLVED QUESTIONS
+--------------------
+- None. The skill is ready for use.
+
+EXACT FINAL SKILL PATH
+----------------------
+/Users/jonathan/code/Abacus/.claude/skills/osk-go-guide/
+  SKILL.md
+  references/
+    uber-go-guide-notes.md
