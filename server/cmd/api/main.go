@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/jsanca/abacus/server/internal/app"
+	"github.com/jsanca/abacus/server/internal/calculator"
 	"github.com/jsanca/abacus/server/internal/config"
 	"github.com/jsanca/abacus/server/internal/observability"
 	"github.com/jsanca/abacus/server/internal/transport"
@@ -27,6 +28,14 @@ func run() error {
 	serverConfig, err := config.Load()
 	if err != nil {
 		return fmt.Errorf("configuration error: %w", err)
+	}
+
+	// Validate the operation registry at startup so misconfigured operations
+	// fail fast before the HTTP server begins accepting requests.
+	// The registry will be wired as a named dependency in ABA-007 when the
+	// operations and calculation endpoints are introduced.
+	if _, err := calculator.NewDefaultRegistry(); err != nil {
+		return fmt.Errorf("invalid operation registry: %w", err)
 	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))

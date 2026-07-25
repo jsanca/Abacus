@@ -35,7 +35,15 @@ docs/knowledge/     Long-lived engineering knowledge
 
 ## Running the Project
 
-Implementation instructions will be added when the client and server are introduced.
+Start the complete local stack with:
+
+```sh
+docker compose up --build
+```
+
+The frontend is available at <http://localhost:3000>. The backend health endpoint is available at <http://localhost:8080/health>.
+
+Stop the stack with `docker compose down` (or `make docker-down`).
 
 ## Testing
 
@@ -43,7 +51,7 @@ Test commands and conventions will be added alongside the implementation.
 
 ## Docker
 
-`docker-compose.yml` is reserved for local project execution. Service definitions will be introduced with the runtime implementation.
+Docker Compose runs the production React static build and the Go backend together. The client is served by unprivileged Nginx with SPA fallback; it intentionally continues to use its mocked API boundary until backend integration is scheduled.
 
 ## Engineering Process
 
