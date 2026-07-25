@@ -88,6 +88,17 @@ func divisionOperation() Operation {
 				{ID: OperandFirst, Label: "Dividend", Placeholder: "0"},
 				{ID: OperandSecond, Label: "Divisor", Placeholder: "0"},
 			},
+			Validations: []ValidationDefinition{
+				{
+					ID:      "division-by-zero",
+					Message: "The divisor must not be zero.",
+					Expression: ComparisonExpression{
+						Operand:  SecondOperand,
+						Operator: NotEqual,
+						Value:    0,
+					},
+				},
+			},
 		},
 		Execute: executeDivision,
 	}
@@ -122,6 +133,17 @@ func squareRootOperation() Operation {
 				// Prefix notation: the symbol precedes the operand (√144, not 144√).
 				{ID: OperandFirst, Label: "Number", Placeholder: "0"},
 			},
+			Validations: []ValidationDefinition{
+				{
+					ID:      "square-root-negative",
+					Message: "The number must be zero or greater.",
+					Expression: ComparisonExpression{
+						Operand:  FirstOperand,
+						Operator: GreaterThanOrEqual,
+						Value:    0,
+					},
+				},
+			},
 		},
 		Execute: executeSquareRoot,
 	}
@@ -139,6 +161,18 @@ func percentageOperation() Operation {
 				{ID: OperandFirst, Label: "Base value", Placeholder: "0"},
 				// The non-editable suffix "%" is displayed alongside this field.
 				{ID: OperandSecond, Label: "Percentage", Placeholder: "0", Suffix: "%"},
+			},
+			Validations: []ValidationDefinition{
+				{
+					ID:      "percentage-range",
+					Message: "Percentage must be between 0 and 100.",
+					Expression: AllOfExpression{
+						Expressions: []Expression{
+							ComparisonExpression{Operand: SecondOperand, Operator: GreaterThanOrEqual, Value: 0},
+							ComparisonExpression{Operand: SecondOperand, Operator: LessThanOrEqual, Value: 100},
+						},
+					},
+				},
 			},
 		},
 		Execute: executePercentage,

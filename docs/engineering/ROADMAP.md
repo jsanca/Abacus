@@ -12,7 +12,8 @@ This roadmap describes intended delivery order. It is not a historical changelog
 | 6 | ABA-003 | Backend Foundation | Establish the Go service composition, configuration, lifecycle, and observability boundary. | Complete |
 | 7 | ABA-004.1 | Client Containerization | Build and serve the production React client alongside the backend through Docker Compose. | Complete |
 | 8 | ABA-005 | Operation Registry | Implement the immutable operation registry and backend-generated manifest. | Complete |
-| 9 | — | Validation Model | Define and apply declarative operation validation. | Planned |
+| 9 | ABA-006 | Validation Model | Define and apply declarative operation validation. | Complete |
+| 9.1 | ABA-006.1 | Cohesive Validation Refinement | Polymorphic expression evaluation and operation-owned validation. | Complete |
 | 10 | — | REST API | Expose operation discovery and execution through the HTTP API. | Planned |
 | 11 | — | React Integration | Replace the mock boundary with the backend API and verify contract compatibility. | Planned |
 | 12 | — | Docker & Runtime | Add local service execution and graceful runtime shutdown. | Planned |

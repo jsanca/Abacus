@@ -3,7 +3,10 @@
 // transport, app, config, or observability packages.
 package calculator
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // Arity represents the number of operands a calculator operation requires.
 type Arity int
@@ -28,8 +31,7 @@ var ErrWrongOperandCount = errors.New("wrong number of operands")
 // ExecuteFunc performs a calculator operation on the given operands and returns
 // the numeric result or an error. Callers are expected to validate arity and
 // domain constraints before invoking an executor; executors guard only against
-// wrong operand count. Domain validation (e.g. divisor not zero) is introduced
-// in ABA-006.
+// wrong operand count.
 type ExecuteFunc func(operands []float64) (float64, error)
 
 // OperandDefinition describes a single input slot for a calculator operation.
@@ -62,6 +64,9 @@ type OperationDefinition struct {
 	Arity Arity
 	// Operands describes each input slot in presentation order.
 	Operands []OperandDefinition
+	// Validations is the ordered list of declarative constraints for this operation.
+	// An empty slice means the operation has no validation rules.
+	Validations []ValidationDefinition
 }
 
 // Operation pairs a frontend-safe definition with a trusted backend executor.
@@ -73,11 +78,44 @@ type Operation struct {
 	Execute ExecuteFunc
 }
 
-// copyOperation returns a deep copy of an Operation with its own Operands backing array.
-// This prevents callers from aliasing the registry's internal operand storage.
+// Validate evaluates all validation rules for the operation against the given operands
+// in declaration order. It returns the first violated ValidationDefinition, nil when
+// all rules pass, or a non-nil error when a validation expression cannot be evaluated.
+// The error identifies the operation ID, validation ID, and the underlying cause.
+func (operation Operation) Validate(operands []float64) (*ValidationDefinition, error) {
+	for _, validation := range operation.Definition.Validations {
+		if validation.Expression == nil {
+			return nil, fmt.Errorf("operation %q: validation %q: expression must not be nil", operation.Definition.ID, validation.ID)
+		}
+		passed, err := validation.Expression.evaluate(operands)
+		if err != nil {
+			return nil, fmt.Errorf("operation %q: validation %q: %w", operation.Definition.ID, validation.ID, err)
+		}
+		if !passed {
+			violated := validation
+			return &violated, nil
+		}
+	}
+	return nil, nil
+}
+
+// copyOperation returns a deep copy of an Operation with independent backing arrays
+// for Operands and Validations. Expression trees within each ValidationDefinition are
+// recursively copied to prevent aliasing of AllOfExpression.Expressions slices.
 func copyOperation(operation Operation) Operation {
 	operandsCopy := make([]OperandDefinition, len(operation.Definition.Operands))
 	copy(operandsCopy, operation.Definition.Operands)
 	operation.Definition.Operands = operandsCopy
+
+	validationsCopy := make([]ValidationDefinition, len(operation.Definition.Validations))
+	for index, validation := range operation.Definition.Validations {
+		validationsCopy[index] = ValidationDefinition{
+			ID:         validation.ID,
+			Message:    validation.Message,
+			Expression: copyExpression(validation.Expression),
+		}
+	}
+	operation.Definition.Validations = validationsCopy
+
 	return operation
 }

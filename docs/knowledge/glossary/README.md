@@ -28,7 +28,22 @@ The number of operands an operation requires. Supported values: `1` (unary, e.g.
 **Default operation**
 The operation selected when the calculator loads for the first time. Currently: `addition`.
 
-## Validation (ABA-006)
+## Validation
 
-**ValidationDefinition** *(planned)*
-A declarative rule associated with an operation, describing a constraint on one or more operands. Populated in ABA-006; the manifest currently returns an empty `validations` array.
+**ValidationDefinition**
+A declarative rule associated with an operation: a stable backend `ID`, a user-facing `Message`, and an `Expression` tree that must evaluate to `true` for the operands to be valid. The first violated rule is returned by `Validate`; the `ID` is backend-only and excluded from the manifest.
+
+**Expression**
+A sealed interface with two unexported methods (`expressionNode()` marker and `evaluate(operands []float64) (bool, error)`). Only `ComparisonExpression` and `AllOfExpression` are valid implementations. Each type owns the semantics of its own evaluation; the interface is not exposed as a general-purpose evaluator.
+
+**ComparisonExpression**
+A leaf `Expression` that compares one operand (by `OperandReference`) against a literal `float64` value using a `ComparisonOperator`. Serializes to `{"kind":"comparison","operand":"...","operator":"...","value":N}`.
+
+**AllOfExpression**
+A composite `Expression` that evaluates to true when every child expression in its `Expressions` slice evaluates to true. An empty slice is vacuously true. Serializes to `{"kind":"allOf","expressions":[...]}`.
+
+**OperandReference**
+A typed string identifying which positional operand to read during expression evaluation. Supported values: `"first"` (operands[0]) and `"second"` (operands[1]).
+
+**ComparisonOperator**
+A typed string identifying the comparison relationship in a `ComparisonExpression`. Supported values: `equal`, `notEqual`, `greaterThan`, `greaterThanOrEqual`, `lessThan`, `lessThanOrEqual`. These match the TypeScript frontend contract.

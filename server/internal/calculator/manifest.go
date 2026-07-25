@@ -1,7 +1,5 @@
 package calculator
 
-import "encoding/json"
-
 // ManifestVersion is the stable schema version included in every manifest response.
 const ManifestVersion = "1"
 
@@ -24,17 +22,13 @@ type Manifest struct {
 // ManifestOperation is the frontend-safe projection of a single Operation.
 // It excludes the executor function and any backend-only runtime details.
 type ManifestOperation struct {
-	ID       string            `json:"id"`
-	Name     string            `json:"name"`
-	Symbol   string            `json:"symbol"`
-	Shortcut string            `json:"shortcut"`
-	Arity    int               `json:"arity"`
-	Operands []ManifestOperand `json:"operands"`
-	// Validations is always an empty JSON array in this manifest version.
-	// The declarative validation contract (ABA-006) will populate this field.
-	// An empty array is used rather than null to match the TypeScript
-	// ValidationDefinition[] contract, which the client reads as an iterable.
-	Validations json.RawMessage `json:"validations"`
+	ID          string               `json:"id"`
+	Name        string               `json:"name"`
+	Symbol      string               `json:"symbol"`
+	Shortcut    string               `json:"shortcut"`
+	Arity       int                  `json:"arity"`
+	Operands    []ManifestOperand    `json:"operands"`
+	Validations []ManifestValidation `json:"validations"`
 }
 
 // ManifestOperand is the frontend-safe projection of a single OperandDefinition.
@@ -43,6 +37,14 @@ type ManifestOperand struct {
 	Label       string `json:"label"`
 	Placeholder string `json:"placeholder"`
 	Suffix      string `json:"suffix,omitempty"`
+}
+
+// ManifestValidation is the frontend-safe projection of a single ValidationDefinition.
+// It includes the user-facing message and the serializable expression tree.
+// The backend-only ID field is excluded.
+type ManifestValidation struct {
+	Message    string     `json:"message"`
+	Expression Expression `json:"expression"`
 }
 
 // Manifest generates a frontend-safe projection of the registry.
@@ -70,6 +72,14 @@ func projectOperation(operation Operation) ManifestOperation {
 		manifestOperands[index] = ManifestOperand(operand)
 	}
 
+	manifestValidations := make([]ManifestValidation, len(definition.Validations))
+	for index, validation := range definition.Validations {
+		manifestValidations[index] = ManifestValidation{
+			Message:    validation.Message,
+			Expression: copyExpression(validation.Expression),
+		}
+	}
+
 	return ManifestOperation{
 		ID:          definition.ID,
 		Name:        definition.Name,
@@ -77,6 +87,6 @@ func projectOperation(operation Operation) ManifestOperation {
 		Shortcut:    definition.Shortcut,
 		Arity:       int(definition.Arity),
 		Operands:    manifestOperands,
-		Validations: json.RawMessage("[]"),
+		Validations: manifestValidations,
 	}
 }

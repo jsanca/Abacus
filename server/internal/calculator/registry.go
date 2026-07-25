@@ -124,5 +124,17 @@ func validateRegistryOperation(operation Operation) error {
 		return fmt.Errorf("operation %q: executor must not be nil", definition.ID)
 	}
 
+	for index, validation := range definition.Validations {
+		if validation.ID == "" {
+			return fmt.Errorf("operation %q: validation at index %d: ID must not be empty", definition.ID, index)
+		}
+		if validation.Message == "" {
+			return fmt.Errorf("operation %q: validation %q: message must not be empty", definition.ID, validation.ID)
+		}
+		if err := validateExpressionDefinition(validation.Expression, definition.Arity); err != nil {
+			return fmt.Errorf("operation %q: validation %q: %w", definition.ID, validation.ID, err)
+		}
+	}
+
 	return nil
 }

@@ -391,33 +391,6 @@ func TestManifest_percentage_secondOperandHasSuffix(t *testing.T) {
 	}
 }
 
-func TestManifest_validationsAlwaysEmptyArray(t *testing.T) {
-	registry, _ := calculator.NewDefaultRegistry()
-	manifest := registry.Manifest()
-
-	data, _ := json.Marshal(manifest)
-	var raw map[string]any
-	json.Unmarshal(data, &raw) //nolint:errcheck
-
-	ops := raw["operations"].([]any)
-	for _, op := range ops {
-		opMap := op.(map[string]any)
-		validations, exists := opMap["validations"]
-		if !exists {
-			t.Errorf("operation %v missing validations field", opMap["id"])
-			continue
-		}
-		validationSlice, ok := validations.([]any)
-		if !ok {
-			t.Errorf("operation %v: validations is not an array, got %T", opMap["id"], validations)
-			continue
-		}
-		if len(validationSlice) != 0 {
-			t.Errorf("operation %v: expected empty validations array, got %d elements", opMap["id"], len(validationSlice))
-		}
-	}
-}
-
 func TestManifest_callerCannotMutateRegistryOperands(t *testing.T) {
 	registry, _ := calculator.NewDefaultRegistry()
 
@@ -427,5 +400,233 @@ func TestManifest_callerCannotMutateRegistryOperands(t *testing.T) {
 	secondManifest := registry.Manifest()
 	if secondManifest.Operations[0].Operands[0].Label == "mutated" {
 		t.Error("mutating the manifest propagated into the registry")
+	}
+}
+
+// --- Registry construction: validation definition validation ---
+
+// buildValidOp returns a minimal valid binary operation.
+func buildValidOp(id string) calculator.Operation {
+	return calculator.Operation{
+		Definition: calculator.OperationDefinition{
+			ID:       id,
+			Name:     "Op",
+			Symbol:   "+",
+			Shortcut: "+",
+			Arity:    calculator.Binary,
+			Operands: []calculator.OperandDefinition{
+				{ID: calculator.OperandFirst, Label: "First", Placeholder: "0"},
+				{ID: calculator.OperandSecond, Label: "Second", Placeholder: "0"},
+			},
+		},
+		Execute: func(operands []float64) (float64, error) { return 0, nil },
+	}
+}
+
+// buildOpWithValidation returns a binary operation carrying the given validation.
+func buildOpWithValidation(id string, validation calculator.ValidationDefinition) calculator.Operation {
+	op := buildValidOp(id)
+	op.Definition.Validations = []calculator.ValidationDefinition{validation}
+	return op
+}
+
+func assertRegistryRejectsOp(t *testing.T, op calculator.Operation, wantFragment string) {
+	t.Helper()
+	_, err := calculator.NewRegistry(op.Definition.ID, []calculator.Operation{op})
+	if err == nil {
+		t.Fatal("expected registry construction error, got nil")
+	}
+	if !strings.Contains(err.Error(), wantFragment) {
+		t.Errorf("expected error containing %q, got: %q", wantFragment, err.Error())
+	}
+}
+
+func TestRegistry_ValidationDefinition_emptyID(t *testing.T) {
+	op := buildOpWithValidation("op", calculator.ValidationDefinition{
+		ID:      "",
+		Message: "msg",
+		Expression: calculator.ComparisonExpression{
+			Operand: calculator.FirstOperand, Operator: calculator.Equal, Value: 0,
+		},
+	})
+	assertRegistryRejectsOp(t, op, "ID must not be empty")
+}
+
+func TestRegistry_ValidationDefinition_emptyMessage(t *testing.T) {
+	op := buildOpWithValidation("op", calculator.ValidationDefinition{
+		ID:      "rule",
+		Message: "",
+		Expression: calculator.ComparisonExpression{
+			Operand: calculator.FirstOperand, Operator: calculator.Equal, Value: 0,
+		},
+	})
+	assertRegistryRejectsOp(t, op, "message must not be empty")
+}
+
+func TestRegistry_ValidationDefinition_nilExpression(t *testing.T) {
+	op := buildOpWithValidation("op", calculator.ValidationDefinition{
+		ID:         "rule",
+		Message:    "msg",
+		Expression: nil,
+	})
+	assertRegistryRejectsOp(t, op, "expression must not be nil")
+}
+
+func TestRegistry_ValidationDefinition_unsupportedOperandReference(t *testing.T) {
+	op := buildOpWithValidation("op", calculator.ValidationDefinition{
+		ID:      "rule",
+		Message: "msg",
+		Expression: calculator.ComparisonExpression{
+			Operand: calculator.OperandReference("bogus"), Operator: calculator.Equal, Value: 0,
+		},
+	})
+	assertRegistryRejectsOp(t, op, "unsupported operand reference")
+}
+
+func TestRegistry_ValidationDefinition_secondOperandOnUnaryOperation(t *testing.T) {
+	op := calculator.Operation{
+		Definition: calculator.OperationDefinition{
+			ID:       "unary-op",
+			Name:     "Op",
+			Symbol:   "√",
+			Shortcut: "r",
+			Arity:    calculator.Unary,
+			Operands: []calculator.OperandDefinition{
+				{ID: calculator.OperandFirst, Label: "Number", Placeholder: "0"},
+			},
+			Validations: []calculator.ValidationDefinition{
+				{
+					ID:      "rule",
+					Message: "msg",
+					Expression: calculator.ComparisonExpression{
+						Operand:  calculator.SecondOperand, // invalid for unary
+						Operator: calculator.Equal,
+						Value:    0,
+					},
+				},
+			},
+		},
+		Execute: func(operands []float64) (float64, error) { return 0, nil },
+	}
+	assertRegistryRejectsOp(t, op, "requires arity")
+}
+
+func TestRegistry_ValidationDefinition_unsupportedOperator(t *testing.T) {
+	op := buildOpWithValidation("op", calculator.ValidationDefinition{
+		ID:      "rule",
+		Message: "msg",
+		Expression: calculator.ComparisonExpression{
+			Operand: calculator.FirstOperand, Operator: calculator.ComparisonOperator("bogus"), Value: 0,
+		},
+	})
+	assertRegistryRejectsOp(t, op, "unsupported comparison operator")
+}
+
+func TestRegistry_ValidationDefinition_nilAllOfChild(t *testing.T) {
+	op := buildOpWithValidation("op", calculator.ValidationDefinition{
+		ID:      "rule",
+		Message: "msg",
+		Expression: calculator.AllOfExpression{
+			Expressions: []calculator.Expression{nil},
+		},
+	})
+	assertRegistryRejectsOp(t, op, "must not be nil")
+}
+
+func TestRegistry_ValidationDefinition_malformedAllOfChild(t *testing.T) {
+	op := buildOpWithValidation("op", calculator.ValidationDefinition{
+		ID:      "rule",
+		Message: "msg",
+		Expression: calculator.AllOfExpression{
+			Expressions: []calculator.Expression{
+				calculator.ComparisonExpression{
+					Operand:  calculator.OperandReference("bogus"),
+					Operator: calculator.Equal,
+					Value:    0,
+				},
+			},
+		},
+	})
+	assertRegistryRejectsOp(t, op, "unsupported operand reference")
+}
+
+// --- Deep immutability ---
+
+func TestRegistry_DeepImmutability_mutatingSourceAllOf(t *testing.T) {
+	// Build a source AllOfExpression with two children.
+	source := []calculator.Expression{
+		calculator.ComparisonExpression{Operand: calculator.SecondOperand, Operator: calculator.GreaterThanOrEqual, Value: 0},
+		calculator.ComparisonExpression{Operand: calculator.SecondOperand, Operator: calculator.LessThanOrEqual, Value: 100},
+	}
+	op := buildOpWithValidation("pct", calculator.ValidationDefinition{
+		ID:      "range",
+		Message: "must be 0–100",
+		Expression: calculator.AllOfExpression{
+			Expressions: source,
+		},
+	})
+	registry, err := calculator.NewRegistry("pct", []calculator.Operation{op})
+	if err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	// Mutate the source slice after registry construction.
+	source[0] = calculator.ComparisonExpression{
+		Operand:  calculator.SecondOperand,
+		Operator: calculator.Equal,
+		Value:    999,
+	}
+
+	found, _ := registry.Find("pct")
+
+	// Registry should still enforce the original rules (>= 0 AND <= 100).
+	if violation, err := found.Validate([]float64{0, 50}); violation != nil || err != nil {
+		t.Errorf("50 should pass original rules; violation=%v err=%v", violation, err)
+	}
+	if violation, _ := found.Validate([]float64{0, -1}); violation == nil {
+		t.Error("-1 should fail original rules; registry appears affected by source mutation")
+	}
+
+	// Manifest should still reflect the original expression.
+	manifestData, _ := json.Marshal(registry.Manifest())
+	raw := string(manifestData)
+	if !strings.Contains(raw, "greaterThanOrEqual") {
+		t.Error("manifest does not contain original operator after source mutation")
+	}
+	if strings.Contains(raw, "999") {
+		t.Error("manifest was affected by source mutation")
+	}
+}
+
+func TestRegistry_DeepImmutability_mutatingReturnedOperation(t *testing.T) {
+	source := []calculator.Expression{
+		calculator.ComparisonExpression{Operand: calculator.SecondOperand, Operator: calculator.GreaterThanOrEqual, Value: 0},
+		calculator.ComparisonExpression{Operand: calculator.SecondOperand, Operator: calculator.LessThanOrEqual, Value: 100},
+	}
+	op := buildOpWithValidation("pct", calculator.ValidationDefinition{
+		ID:      "range",
+		Message: "must be 0–100",
+		Expression: calculator.AllOfExpression{
+			Expressions: source,
+		},
+	})
+	registry, err := calculator.NewRegistry("pct", []calculator.Operation{op})
+	if err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	// Get a copy from Find and mutate its expression tree.
+	returned, _ := registry.Find("pct")
+	allOf := returned.Definition.Validations[0].Expression.(calculator.AllOfExpression)
+	allOf.Expressions[0] = calculator.ComparisonExpression{
+		Operand:  calculator.SecondOperand,
+		Operator: calculator.Equal,
+		Value:    999,
+	}
+
+	// The registry's stored copy must be unaffected.
+	canonical, _ := registry.Find("pct")
+	if violation, _ := canonical.Validate([]float64{0, -1}); violation == nil {
+		t.Error("-1 should fail registry's canonical rules; Find copy mutation propagated into registry")
 	}
 }
