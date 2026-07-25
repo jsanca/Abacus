@@ -41,17 +41,40 @@ Start the complete local stack with:
 docker compose up --build
 ```
 
-The frontend is available at <http://localhost:3000>. The backend health endpoint is available at <http://localhost:8080/health>.
+The calculator is available at <http://localhost:3000>. The backend API is available at <http://localhost:8080>.
+
+| URL | Description |
+|---|---|
+| `http://localhost:3000` | React calculator frontend |
+| `http://localhost:8080/health` | Backend health check |
+| `http://localhost:8080/api/v1/operations` | Operation manifest |
+| `http://localhost:8080/api/v1/calculations` | Execute a calculation |
 
 Stop the stack with `docker compose down` (or `make docker-down`).
 
+For local development with live reload, run the backend (`make run-server`) and the frontend (`npm run dev` in `client/`) separately. The Vite dev server proxies `/api` to `localhost:8080`.
+
 ## Testing
 
-Test commands and conventions will be added alongside the implementation.
+**Backend:**
+```sh
+make test          # unit tests
+make verify        # fmt + lint + race tests + build
+```
+
+**Frontend:**
+```sh
+cd client && npm test
+cd client && npm run verify   # lint + build + coverage
+```
+
+## API
+
+See [API Contract](docs/knowledge/api/API_CONTRACT.md) for endpoint documentation, request/response shapes, validation error codes, and curl examples.
 
 ## Docker
 
-Docker Compose runs the production React static build and the Go backend together. The client is served by unprivileged Nginx with SPA fallback; it intentionally continues to use its mocked API boundary until backend integration is scheduled.
+Docker Compose runs the production React static build and the Go backend together. The client is served by unprivileged Nginx with SPA fallback and API proxy; the backend serves the operation manifest and executes calculations via the immutable registry.
 
 ## Engineering Process
 

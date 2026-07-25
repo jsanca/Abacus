@@ -20,12 +20,14 @@ export interface OperationDefinition {
   id: string;
   name: string;
   symbol: string;
+  shortcut: string;
   arity: 1 | 2;
   operands: OperandDefinition[];
   validations: ValidationDefinition[];
 }
 
 export interface OperationManifest {
+  version: string;
   operations: OperationDefinition[];
   defaultOperationId: string;
 }
@@ -41,6 +43,6 @@ export interface CalculationResponse {
 }
 
 export interface ApiError {
-  code: 'manifest_unavailable' | 'unknown_operation' | 'validation_failed' | 'service_unavailable';
+  code: 'manifest_unavailable' | 'unknown_operation' | 'validation_failed' | 'calculation_failed' | 'service_unavailable';
   message: string;
 }

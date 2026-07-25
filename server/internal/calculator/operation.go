@@ -34,6 +34,11 @@ var ErrWrongOperandCount = errors.New("wrong number of operands")
 // wrong operand count.
 type ExecuteFunc func(operands []float64) (float64, error)
 
+// FormatExpressionFunc formats a human-readable expression string from an operation
+// definition and its operands. It returns a descriptive error when formatting cannot
+// proceed due to insufficient operands.
+type FormatExpressionFunc func(definition OperationDefinition, operands []float64) (string, error)
+
 // OperandDefinition describes a single input slot for a calculator operation.
 // All fields are safe to expose to the frontend.
 type OperandDefinition struct {
@@ -76,6 +81,9 @@ type Operation struct {
 	Definition OperationDefinition
 	// Execute performs the arithmetic for this operation.
 	Execute ExecuteFunc
+	// FormatExpression formats the expression string for a resolved calculation.
+	// When nil, the transport applies standard unary prefix or binary infix notation.
+	FormatExpression FormatExpressionFunc
 }
 
 // Validate evaluates all validation rules for the operation against the given operands

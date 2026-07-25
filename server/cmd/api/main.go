@@ -30,18 +30,15 @@ func run() error {
 		return fmt.Errorf("configuration error: %w", err)
 	}
 
-	// Validate the operation registry at startup so misconfigured operations
-	// fail fast before the HTTP server begins accepting requests.
-	// The registry will be wired as a named dependency in ABA-007 when the
-	// operations and calculation endpoints are introduced.
-	if _, err := calculator.NewDefaultRegistry(); err != nil {
+	registry, err := calculator.NewDefaultRegistry()
+	if err != nil {
 		return fmt.Errorf("invalid operation registry: %w", err)
 	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	observer := &observability.Observer{}
 
-	router := transport.NewRouter(logger, observer, transport.RouterConfig{
+	router := transport.NewRouter(logger, observer, registry, transport.RouterConfig{
 		AllowedOrigin:  serverConfig.AllowedOrigin,
 		RequestTimeout: serverConfig.RequestTimeout,
 	})

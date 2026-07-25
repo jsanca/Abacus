@@ -14,7 +14,6 @@ This roadmap describes intended delivery order. It is not a historical changelog
 | 8 | ABA-005 | Operation Registry | Implement the immutable operation registry and backend-generated manifest. | Complete |
 | 9 | ABA-006 | Validation Model | Define and apply declarative operation validation. | Complete |
 | 9.1 | ABA-006.1 | Cohesive Validation Refinement | Polymorphic expression evaluation and operation-owned validation. | Complete |
-| 10 | — | REST API | Expose operation discovery and execution through the HTTP API. | Planned |
-| 11 | — | React Integration | Replace the mock boundary with the backend API and verify contract compatibility. | Planned |
-| 12 | — | Docker & Runtime | Add local service execution and graceful runtime shutdown. | Planned |
-| 13 | — | Documentation & Final Review | Complete acceptance documentation, verification, debt review, and final architecture review. | Planned |
+| 10 | ABA-007 | REST API & Frontend Integration | Expose operations and calculation endpoints; replace mock adapter with live HTTP client. | Complete |
+| 10.1 | ABA-007.1 | Smoke-Test Remediation | Fix percentage expression notation; verify and test calculation continuation focus; add all-operation format tests. | Complete |
+| 11 | — | Documentation & Final Review | Complete acceptance documentation, verification, debt review, and final architecture review. | Planned |

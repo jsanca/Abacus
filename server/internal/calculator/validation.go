@@ -183,7 +183,7 @@ func copyExpression(expression Expression) Expression {
 		}
 		return AllOfExpression{Expressions: childrenCopy}
 	default:
-		return expression
+		panic(fmt.Sprintf("copyExpression: unsupported expression type %T", expression))
 	}
 }
 

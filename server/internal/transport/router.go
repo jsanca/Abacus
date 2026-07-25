@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
+	"github.com/jsanca/abacus/server/internal/calculator"
 	"github.com/jsanca/abacus/server/internal/observability"
 )
 
@@ -21,7 +22,7 @@ type RouterConfig struct {
 }
 
 // NewRouter constructs and returns a configured Chi router with middleware and routes registered.
-func NewRouter(logger *slog.Logger, observer *observability.Observer, routerConfig RouterConfig) http.Handler {
+func NewRouter(logger *slog.Logger, observer *observability.Observer, registry *calculator.Registry, routerConfig RouterConfig) http.Handler {
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID)
@@ -36,6 +37,11 @@ func NewRouter(logger *slog.Logger, observer *observability.Observer, routerConf
 	router.Use(requestLoggingMiddleware(logger, observer))
 
 	router.Get("/health", newHealthHandler(logger))
+
+	router.Route("/api/v1", func(apiRouter chi.Router) {
+		apiRouter.Get("/operations", newOperationsHandler(logger, registry))
+		apiRouter.Post("/calculations", newCalculateHandler(logger, registry))
+	})
 
 	return router
 }

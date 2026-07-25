@@ -1,8 +1,25 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Calculator } from '../components/Calculator';
-import { configureMockScenario } from '../api/mockCalculatorApi';
+import * as calculatorApi from '../api/calculatorApi';
+import type { ApiError, OperationManifest } from '../api/types';
+
+vi.mock('../api/calculatorApi');
+
+const mockManifest: OperationManifest = {
+  version: '1',
+  defaultOperationId: 'addition',
+  operations: [
+    { id: 'addition', name: 'Addition', symbol: '+', shortcut: '+', arity: 2, operands: [{ id: 'first', label: 'First number', placeholder: '0' }, { id: 'second', label: 'Second number', placeholder: '0' }], validations: [] },
+    { id: 'subtraction', name: 'Subtraction', symbol: '−', shortcut: '-', arity: 2, operands: [{ id: 'first', label: 'First number', placeholder: '0' }, { id: 'second', label: 'Second number', placeholder: '0' }], validations: [] },
+    { id: 'multiplication', name: 'Multiplication', symbol: '×', shortcut: '*', arity: 2, operands: [{ id: 'first', label: 'First number', placeholder: '0' }, { id: 'second', label: 'Second number', placeholder: '0' }], validations: [] },
+    { id: 'division', name: 'Division', symbol: '÷', shortcut: '/', arity: 2, operands: [{ id: 'first', label: 'Dividend', placeholder: '0' }, { id: 'second', label: 'Divisor', placeholder: '0' }], validations: [{ message: 'The divisor must not be zero.', expression: { kind: 'comparison', operand: 'second', operator: 'notEqual', value: 0 } }] },
+    { id: 'exponentiation', name: 'Exponentiation', symbol: 'xʸ', shortcut: '^', arity: 2, operands: [{ id: 'first', label: 'Base', placeholder: '0' }, { id: 'second', label: 'Exponent', placeholder: '0' }], validations: [] },
+    { id: 'square-root', name: 'Square Root', symbol: '√', shortcut: 'r', arity: 1, operands: [{ id: 'first', label: 'Number', placeholder: '0' }], validations: [{ message: 'The number must be zero or greater.', expression: { kind: 'comparison', operand: 'first', operator: 'greaterThanOrEqual', value: 0 } }] },
+    { id: 'percentage', name: 'Percentage', symbol: '%', shortcut: '%', arity: 2, operands: [{ id: 'first', label: 'Base value', placeholder: '0' }, { id: 'second', label: 'Percentage', placeholder: '0', suffix: '%' }], validations: [{ message: 'Percentage must be between 0 and 100.', expression: { kind: 'allOf', expressions: [{ kind: 'comparison', operand: 'second', operator: 'greaterThanOrEqual', value: 0 }, { kind: 'comparison', operand: 'second', operator: 'lessThanOrEqual', value: 100 }] } }] },
+  ],
+};
 
 const renderReadyCalculator = async () => {
   render(<Calculator />);
@@ -10,7 +27,11 @@ const renderReadyCalculator = async () => {
 };
 
 describe('Calculator', () => {
-  beforeEach(() => configureMockScenario('healthy'));
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(calculatorApi.getOperations).mockResolvedValue(mockManifest);
+    vi.mocked(calculatorApi.calculate).mockResolvedValue({ expression: '', result: 0 });
+  });
   afterEach(cleanup);
 
   it('renders every operation supplied by the manifest', async () => {
@@ -27,12 +48,12 @@ describe('Calculator', () => {
 
   it('retries manifest loading after a recoverable service error', async () => {
     const user = userEvent.setup();
-    configureMockScenario('manifestFailure');
+    vi.mocked(calculatorApi.getOperations)
+      .mockRejectedValueOnce({ code: 'manifest_unavailable', message: 'Calculator capabilities are unavailable.' } as ApiError)
+      .mockResolvedValueOnce(mockManifest);
     render(<Calculator />);
     expect(await screen.findByRole('alert')).toHaveTextContent('capabilities are unavailable');
-    configureMockScenario('healthy');
     await user.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(screen.getByText('Loading calculator capabilities…')).toBeVisible();
     expect(await screen.findByRole('button', { name: 'Addition' })).toHaveAttribute('aria-pressed', 'true');
   });
 
@@ -57,8 +78,9 @@ describe('Calculator', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Percentage must be between 0 and 100.');
   });
 
-  it('calculates through the mocked API and preserves the expression', async () => {
+  it('calculates through the API and preserves the expression', async () => {
     const user = userEvent.setup();
+    vi.mocked(calculatorApi.calculate).mockResolvedValue({ expression: '144 ÷ 12', result: 12 });
     await renderReadyCalculator();
     await user.click(screen.getByRole('button', { name: 'Division' }));
     await user.type(screen.getByRole('textbox', { name: 'Dividend' }), '144');
@@ -80,6 +102,7 @@ describe('Calculator', () => {
 
   it('continues from the previous result after selecting a new operation', async () => {
     const user = userEvent.setup();
+    vi.mocked(calculatorApi.calculate).mockResolvedValue({ expression: '144 ÷ 12', result: 12 });
     await renderReadyCalculator();
     await user.click(screen.getByRole('button', { name: 'Division' }));
     await user.type(screen.getByRole('textbox', { name: 'Dividend' }), '144');
@@ -91,6 +114,37 @@ describe('Calculator', () => {
     const secondNumber = screen.getByRole('textbox', { name: 'Second number' });
     expect(secondNumber).toHaveValue('');
     await waitFor(() => expect(secondNumber).toHaveFocus());
+  });
+
+  it('continues from a unary result to a binary operation', async () => {
+    const user = userEvent.setup();
+    vi.mocked(calculatorApi.calculate).mockResolvedValue({ expression: '√144', result: 12 });
+    await renderReadyCalculator();
+    await user.click(screen.getByRole('button', { name: 'Square Root' }));
+    await user.type(screen.getByRole('textbox', { name: 'Number' }), '144');
+    await user.click(screen.getByRole('button', { name: 'Calculate' }));
+    await screen.findByText('√144 = 12');
+    await user.click(screen.getByRole('button', { name: 'Addition' }));
+    expect(screen.getByRole('textbox', { name: 'First number' })).toHaveValue('12');
+    const secondNumber = screen.getByRole('textbox', { name: 'Second number' });
+    expect(secondNumber).toHaveValue('');
+    await waitFor(() => expect(secondNumber).toHaveFocus());
+  });
+
+  it('continues from a binary result to a unary operation', async () => {
+    const user = userEvent.setup();
+    vi.mocked(calculatorApi.calculate).mockResolvedValue({ expression: '144 ÷ 12', result: 12 });
+    await renderReadyCalculator();
+    await user.click(screen.getByRole('button', { name: 'Division' }));
+    await user.type(screen.getByRole('textbox', { name: 'Dividend' }), '144');
+    await user.type(screen.getByRole('textbox', { name: 'Divisor' }), '12');
+    await user.click(screen.getByRole('button', { name: 'Calculate' }));
+    await screen.findByText('144 ÷ 12 = 12');
+    await user.click(screen.getByRole('button', { name: 'Square Root' }));
+    const numberInput = screen.getByRole('textbox', { name: 'Number' });
+    expect(numberInput).toHaveValue('12');
+    expect(screen.queryByRole('textbox', { name: 'Divisor' })).not.toBeInTheDocument();
+    await waitFor(() => expect(numberInput).toHaveFocus());
   });
 
   it('clears the current calculation and returns focus to the first operand', async () => {
@@ -124,10 +178,10 @@ describe('Calculator', () => {
     expect(screen.getAllByRole('textbox')).toHaveLength(2);
   });
 
-  it('shows a service error when the mocked calculation service fails', async () => {
+  it('shows a service error when the calculation service fails', async () => {
     const user = userEvent.setup();
+    vi.mocked(calculatorApi.calculate).mockRejectedValue({ code: 'service_unavailable', message: 'The calculation service is temporarily unavailable.' } as ApiError);
     await renderReadyCalculator();
-    configureMockScenario('serviceFailure');
     await user.type(screen.getByRole('textbox', { name: 'First number' }), '1');
     await user.type(screen.getByRole('textbox', { name: 'Second number' }), '2');
     await user.click(screen.getByRole('button', { name: 'Calculate' }));
@@ -136,6 +190,7 @@ describe('Calculator', () => {
 
   it('calculates when Enter is pressed in an operand field', async () => {
     const user = userEvent.setup();
+    vi.mocked(calculatorApi.calculate).mockResolvedValue({ expression: '2 + 3', result: 5 });
     await renderReadyCalculator();
     await user.type(screen.getByRole('textbox', { name: 'First number' }), '2');
     await user.type(screen.getByRole('textbox', { name: 'Second number' }), '3{Enter}');

@@ -3,6 +3,7 @@ package calculator
 import (
 	"fmt"
 	"math"
+	"strconv"
 )
 
 // DefaultOperations returns the seven standard Abacus calculator operations in
@@ -175,8 +176,20 @@ func percentageOperation() Operation {
 				},
 			},
 		},
-		Execute: executePercentage,
+		Execute:          executePercentage,
+		FormatExpression: formatPercentageExpression,
 	}
+}
+
+// formatPercentageExpression formats a percentage expression in natural notation:
+// operands[1]% of operands[0]  (e.g. 15% of 200).
+func formatPercentageExpression(definition OperationDefinition, operands []float64) (string, error) {
+	if len(operands) < 2 {
+		return "", fmt.Errorf("format %q expression: need 2 operands, got %d", definition.ID, len(operands))
+	}
+	percentage := strconv.FormatFloat(operands[1], 'f', -1, 64)
+	base := strconv.FormatFloat(operands[0], 'f', -1, 64)
+	return percentage + "% of " + base, nil
 }
 
 func executeAddition(operands []float64) (float64, error) {

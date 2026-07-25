@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
-import { calculate, getOperations } from '../api/mockCalculatorApi';
+import { calculate, getOperations } from '../api/calculatorApi';
 import type { ApiError, OperationManifest } from '../api/types';
 import { validateOperation } from '../model/validation';
 import './Calculator.css';
@@ -9,7 +9,6 @@ type CalculatorState = 'loading' | 'idle' | 'editing' | 'calculating' | 'resolve
 type FocusTarget = 'first' | 'second';
 type FocusIntent = { target: FocusTarget; requestId: number } | undefined;
 
-const shortcutOperationIds: Record<string, string> = { '+': 'addition', '-': 'subtraction', '*': 'multiplication', '/': 'division', '^': 'exponentiation', '%': 'percentage', r: 'square-root' };
 const isErrorState = (state: CalculatorState): boolean => state === 'validation-error' || state === 'service-error';
 
 /** Calculator renders manifest-driven calculator controls and calculated results. */
@@ -27,6 +26,10 @@ export function Calculator() {
   const secondOperandInput = useRef<HTMLInputElement>(null);
   const focusRequestId = useRef(0);
   const selectedOperation = manifest?.operations.find((operation) => operation.id === selectedOperationId);
+  const shortcutMap = useMemo<Record<string, string>>(() => {
+    if (!manifest) return {};
+    return Object.fromEntries(manifest.operations.map((op) => [op.shortcut, op.id]));
+  }, [manifest]);
 
   const loadManifest = useCallback(async () => {
     setCalculatorState('loading');
@@ -89,12 +92,12 @@ export function Calculator() {
     const handleShortcut = (event: globalThis.KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement || event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.key === 'Escape') { clearCalculator(); return; }
-      const operationId = shortcutOperationIds[event.key];
+      const operationId = shortcutMap[event.key];
       if (operationId) selectOperation(operationId);
     };
     window.addEventListener('keydown', handleShortcut);
     return () => window.removeEventListener('keydown', handleShortcut);
-  }, [clearCalculator, selectOperation]);
+  }, [clearCalculator, selectOperation, shortcutMap]);
 
   useEffect(() => {
     if (!focusIntent) return;
