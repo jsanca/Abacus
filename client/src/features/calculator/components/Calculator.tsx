@@ -139,9 +139,9 @@ export function Calculator() {
   return <main className="application-shell">
     <section className="calculator-card" aria-label="Abacus calculator">
       <header className="calculator-header"><span className="brand">Abacus</span><span className="shortcut-hint">Enter to calculate · Esc to clear</span></header>
-      <section className="result-panel" aria-live="polite" aria-atomic="true">
+      <section className="result-panel" role="region" aria-label="Calculation results" aria-live="polite" aria-atomic="true">
         <p className="expression">{expression || 'Ready when you are'}</p>
-        <output className="result-value">{result ?? '—'}</output>
+        <output className="result-value" aria-label="Calculation result">{result ?? '—'}</output>
       </section>
       <form className="calculator-form" onSubmit={submitCalculation}>
         <fieldset className="operator-group"><legend>Operation</legend><div className="operator-grid">
@@ -151,7 +151,7 @@ export function Calculator() {
           <label className="operand-field"><span>{selectedOperation.operands[0].label}</span><input ref={firstOperandInput} value={firstOperandText} onChange={(event) => { setFirstOperandText(event.target.value); setCalculatorState('editing'); }} onKeyDown={handleInputKeyDown} type="text" inputMode="decimal" placeholder={selectedOperation.operands[0].placeholder} aria-describedby="calculator-message" /></label>
           {selectedOperation.arity === 2 && <label className="operand-field"><span>{selectedOperation.operands[1].label}</span><span className="input-with-suffix"><input ref={secondOperandInput} value={secondOperandText} onChange={(event) => { setSecondOperandText(event.target.value); setCalculatorState('editing'); }} onKeyDown={handleInputKeyDown} type="text" inputMode="decimal" placeholder={selectedOperation.operands[1].placeholder} aria-describedby="calculator-message" />{selectedOperation.operands[1].suffix && <span aria-hidden="true">{selectedOperation.operands[1].suffix}</span>}</span></label>}
         </div>
-        <p id="calculator-message" className={isErrorState(calculatorState) ? 'status-message error-message' : 'status-message'} role={isErrorState(calculatorState) ? 'alert' : 'status'}>{message}</p>
+        <p id="calculator-message" aria-label="Calculator status" className={isErrorState(calculatorState) ? 'status-message error-message' : 'status-message'} role={isErrorState(calculatorState) ? 'alert' : 'status'}>{message}</p>
         <div className="action-row"><button className="clear-button" type="button" onClick={clearCalculator}>Clear</button><button className="calculate-button" type="submit" disabled={calculatorState === 'calculating'}>{calculatorState === 'calculating' ? 'Calculating…' : 'Calculate'}</button></div>
       </form>
     </section>

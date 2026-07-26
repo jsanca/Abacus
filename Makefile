@@ -1,4 +1,4 @@
-.PHONY: fmt lint test coverage build run-server docker-up docker-down verify
+.PHONY: fmt lint test coverage build run-server docker-up docker-down verify e2e e2e-local
 
 fmt:
 	cd server && gofmt -w .
@@ -23,6 +23,12 @@ docker-up:
 
 docker-down:
 	docker compose down
+
+e2e:
+	./scripts/run-e2e.sh
+
+e2e-local:
+	cd client && npm run test:e2e:local
 
 verify:
 	@echo "==> Checking formatting..."

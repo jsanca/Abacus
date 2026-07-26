@@ -9,21 +9,27 @@
     "lint": "eslint .",
     "test": "vitest run",
     "coverage": "vitest run --coverage --pool=forks --no-file-parallelism",
-    "verify": "npm run lint && npm run build && npm run coverage"
+    "verify": "npm run lint && npm run build && npm run coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:local": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "vite": "latest"
   },
   "devDependencies": {
     "@eslint/js": "latest",
+    "@playwright/test": "^1.62.0",
     "@testing-library/jest-dom": "latest",
     "@testing-library/react": "latest",
     "@testing-library/user-event": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
+    "@vitest/coverage-v8": "latest",
     "eslint": "latest",
     "eslint-plugin-react-hooks": "latest",
     "eslint-plugin-react-refresh": "latest",
@@ -31,7 +37,6 @@
     "jsdom": "latest",
     "typescript": "latest",
     "typescript-eslint": "latest",
-    "vitest": "latest",
-    "@vitest/coverage-v8": "latest"
+    "vitest": "latest"
   }
 }

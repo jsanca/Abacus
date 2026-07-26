@@ -1,101 +1,104 @@
 # Abacus
 
-## Project Overview
+Abacus is a responsive, operation-based calculator built as a Sezzle software-engineering take-home exercise. A React client renders capabilities supplied by a Go API, so the available operations, labels, validation rules, shortcuts, and expression formatting stay consistent across the stack.
 
-Abacus is an operation-based calculator service created as a software engineering take-home exercise.
+## Features
 
-## Objectives
+- Seven calculations: addition, subtraction, multiplication, division, exponentiation, square root, and percentage.
+- Manifest-driven responsive UI with keyboard shortcuts, clear/reset behavior, focus continuity, and accessible live status/results.
+- Immutable backend operation registry with declarative validation and operation-owned execution/formatting.
+- Production-style local stack: React static bundle served by Nginx, with `/api` proxied to the Go service.
+- Layered automated tests from Go domain/HTTP tests through React component tests to browser acceptance tests.
 
-- Deliver a clear, maintainable calculator experience across desktop and mobile.
-- Keep the operation catalogue, validation, and execution model consistent.
-- Demonstrate proportionate engineering decisions and a verifiable delivery process.
+## Prerequisites
 
-## Architecture Overview
+- Docker Desktop with Docker Compose (required for the full stack and canonical E2E run)
+- Go 1.26+ (required for server commands)
+- Node.js 22+ and npm (required for client commands and Playwright)
 
-The project will use a React + TypeScript client and a Go HTTP service. The backend operation registry is the single source of truth: it produces the operation manifest consumed by the client, validates requests through a shared declarative model, and executes operations with functions. Local services will run with Docker Compose and the backend will support graceful shutdown.
+## Run it
 
-## Technology Stack
-
-- Frontend: React and TypeScript
-- Backend: Go with the Chi HTTP router
-- Local execution: Docker Compose
-- Logging: structured logging with `log/slog`
-
-## Repository Structure
-
-```text
-client/             React + TypeScript frontend
-server/             Go backend
-docs/engineering/   Process, prompts, debt register, and ADRs
-docs/knowledge/     Long-lived engineering knowledge
-.claude/skills/     Claude-oriented project skills
-.codex/skills/      Codex-oriented project skills
-.opencode/skills/   OpenCode-oriented project skills
-```
-
-## Running the Project
-
-Start the complete local stack with:
+The Docker path is the simplest way to run the complete application:
 
 ```sh
 docker compose up --build
+# Calculator: http://localhost:3000
+# API health:  http://localhost:8080/health
 ```
 
-The calculator is available at <http://localhost:3000>. The backend API is available at <http://localhost:8080>.
+Stop it with `make docker-down`.
 
-| URL | Description |
-|---|---|
-| `http://localhost:3000` | React calculator frontend |
-| `http://localhost:8080/health` | Backend health check |
-| `http://localhost:8080/api/v1/operations` | Operation manifest |
-| `http://localhost:8080/api/v1/calculations` | Execute a calculation |
+For local development, run the services separately:
 
-Stop the stack with `docker compose down` (or `make docker-down`).
-
-For local development with live reload, run the backend (`make run-server`) and the frontend (`npm run dev` in `client/`) separately. The Vite dev server proxies `/api` to `localhost:8080`.
-
-## Testing
-
-**Backend:**
 ```sh
-make test          # unit tests
-make verify        # fmt + lint + race tests + build
+make run-server
+cd client && npm install && npm run dev
 ```
 
-**Frontend:**
+The Vite development server proxies `/api` to `http://localhost:8080`.
+
+## Build and verify
+
 ```sh
-cd client && npm test
-cd client && npm run verify   # lint + build + coverage
+make build                 # build the Go API to server/bin/api
+make verify                # Go format check, lint, race tests, build
+cd client && npm run verify # ESLint, TypeScript/Vite build, component coverage
+make e2e                   # clean Compose lifecycle + desktop/mobile Playwright + teardown
+make e2e-local             # Playwright against an already-running Docker stack
 ```
 
-## API
+`make e2e` is the canonical acceptance command. For local browser debugging, use `cd client && npm run test:e2e:headed`; view the last HTML report with `cd client && npm run test:e2e:report`.
 
-See [API Contract](docs/knowledge/api/API_CONTRACT.md) for endpoint documentation, request/response shapes, validation error codes, and curl examples.
+## REST API
 
-## Docker
+The API base path is `/api/v1`.
 
-Docker Compose runs the production React static build and the Go backend together. The client is served by unprivileged Nginx with SPA fallback and API proxy; the backend serves the operation manifest and executes calculations via the immutable registry.
+```sh
+# Read the UI capability manifest
+curl http://localhost:8080/api/v1/operations
 
-## Engineering Process
+# Execute a calculation
+curl -X POST http://localhost:8080/api/v1/calculations \
+  -H 'Content-Type: application/json' \
+  -d '{"operationId":"percentage","operands":[200,15]}'
+```
 
-The agreed workflow is documented in [Engineering Process](docs/engineering/ENGINEERING_PROCESS.md).
+The calculation response is:
 
-## AI-assisted Development
+```json
+{
+  "expression": "15% of 200",
+  "result": 30
+}
+```
 
-AI-assisted work remains subject to human review and project conventions. When prompt usage materially influences an engineering artifact or decision, record it in the [Engineering Log](docs/engineering/ENGINEERING_LOG.md).
+Errors consistently use `{ "code": "...", "message": "..." }`; for example, division by zero produces `422 validation_failed`. The [API contract](docs/knowledge/api/API_CONTRACT.md) specifies the complete manifest, request, validation, and error schema.
 
-## Design Decisions
+## Design decisions
 
-The initial architecture decisions are:
+- An immutable operation registry is the backend source of truth; it generates the frontend manifest in deterministic order.
+- Declarative validation is projected to the client for immediate feedback and enforced again by the API.
+- Operations own execution and specialized expression formatting (for example, `15% of 200`).
+- The frontend is manifest-driven rather than hardcoded to a fixed calculator layout.
+- The Go runtime handles graceful shutdown; Docker Compose provides the repeatable full-stack environment.
+- Tests follow a small testing pyramid: Go unit/HTTP tests → React component tests → Playwright acceptance tests through Nginx and the real API.
 
-- React + TypeScript frontend and Go backend using Chi.
-- Docker Compose for local execution and a runtime with graceful shutdown.
-- An immutable operation registry as the single source of truth.
-- A backend-generated operation manifest with shared declarative validation.
-- Function-based operation execution.
-- A responsive, mobile-capable, operation-based calculator UI rather than a keypad-based UI.
-- Architecture kept proportional to the assignment scope.
+## Testing evidence
 
-## Future Improvements
+The [test strategy](docs/knowledge/testing/TEST_STRATEGY.md) and [verified acceptance results](docs/knowledge/testing/ACCEPTANCE_TEST_RESULTS.md) describe the live-stack suite and retained evidence.
 
-Future enhancements and deferred decisions will be tracked in the [technical debt register](docs/engineering/TECHNICAL_DEBT.md) and ADRs.
+![Desktop calculator](docs/knowledge/testing/evidence/desktop-calculator.png)
+
+![Mobile calculator](docs/knowledge/testing/evidence/mobile-calculator.png)
+
+## Repository structure
+
+```text
+client/  React + TypeScript frontend and Playwright suite
+server/  Go + Chi API and calculator domain
+docs/    Engineering records, API contract, architecture, and test evidence
+```
+
+## Engineering and AI usage
+
+The engineering workflow, decisions, and accepted trade-offs are recorded in the [engineering process](docs/engineering/ENGINEERING_PROCESS.md), [engineering log](docs/engineering/ENGINEERING_LOG.md), [roadmap](docs/engineering/ROADMAP.md), and [technical-debt register](docs/engineering/TECHNICAL_DEBT.md). AI-assisted work was reviewed against project conventions and verified with repository commands; the concise [AI prompt inventory](docs/knowledge/AI_PROMPTS_USED.md) records the tools, roles, and prompt categories without reproducing conversations.

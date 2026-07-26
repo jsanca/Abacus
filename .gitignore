@@ -36,3 +36,5 @@ go.work.sum
 client/node_modules/
 client/dist/
 client/coverage/
+client/playwright-report/
+client/test-results/

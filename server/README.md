@@ -1,5 +1,13 @@
 # Server
 
-The server will provide the Go HTTP API using Chi. It will own the immutable operation registry, generate the operation manifest, validate requests, execute operations, and shut down gracefully.
+The Abacus server is a Go + Chi HTTP API. At startup it creates the immutable calculator operation registry, serves its manifest at `GET /api/v1/operations`, and validates, executes, and formats calculations at `POST /api/v1/calculations`.
 
-No backend implementation is included in this bootstrap task.
+From the repository root:
+
+```sh
+make run-server  # start the API on :8080
+make test        # run server tests
+make verify      # format check, lint, race tests, and build
+```
+
+Use `GET /health` for a readiness probe. The full request/response schema is in the [API contract](../docs/knowledge/api/API_CONTRACT.md).

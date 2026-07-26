@@ -47,7 +47,7 @@ cd server && go test -run TestName ./internal/calculator/
 
 - **Frontend entry:** `client/src/main.tsx` → `App.tsx` → `features/calculator/components/Calculator.tsx`
 - **Frontend features:** `client/src/features/<name>/` with `api/`, `model/`, `components/`, `test/` subdirectories.
-- **Mock API:** `client/src/features/calculator/api/mockCalculatorApi.ts` — the calculator currently uses a mocked API boundary.
+- **Frontend API:** `client/src/features/calculator/api/calculatorApi.ts` — the calculator consumes the live `/api/v1` manifest and calculation endpoints.
 - **Go module:** `github.com/jsanca/abacus/server`
 - **Backend entry:** `server/cmd/api/main.go` → `internal/app/` (lifecycle) → `internal/transport/` (Chi router + middleware) → `internal/calculator/` (registry + operations)
 - **Observability:** `internal/observability/` is a no-op boundary — zero-value `Observer{}` is safe to use. No real telemetry yet.

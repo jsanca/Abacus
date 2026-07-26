@@ -16,4 +16,6 @@ This roadmap describes intended delivery order. It is not a historical changelog
 | 9.1 | ABA-006.1 | Cohesive Validation Refinement | Polymorphic expression evaluation and operation-owned validation. | Complete |
 | 10 | ABA-007 | REST API & Frontend Integration | Expose operations and calculation endpoints; replace mock adapter with live HTTP client. | Complete |
 | 10.1 | ABA-007.1 | Smoke-Test Remediation | Fix percentage expression notation; verify and test calculation continuation focus; add all-operation format tests. | Complete |
-| 11 | — | Documentation & Final Review | Complete acceptance documentation, verification, debt review, and final architecture review. | Planned |
+| 11 | A-008 | Reproducible Playwright E2E Acceptance Suite | Exercise the complete browser-to-backend calculation flow through a Compose-owned acceptance suite. | Complete |
+| 12 | ABA-009R | Final Full-Stack Architecture Delivery Review | Independently assess delivery readiness across architecture, testing, containerization, and documentation. | Complete |
+| 13 | ABA-010 | Repository Curation & Final Documentation | Curate submission-facing documentation, evidence, prompt inventory, and repository consistency. | Complete |
